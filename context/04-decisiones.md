@@ -22,9 +22,16 @@
 | D-13 | **n8n descartado** | No aporta valor sobre LangGraph en este caso | — |
 | D-14 | Contador de intentos se **reinicia a 0** tras una aclaración del usuario | El problema pasa de técnico a resuelto por información nueva | Arrastrar el contador |
 | D-15 | **TDD selectivo** con **Vitest** en la lógica determinista (grafo, intentos, clasificación, API) | Los criterios de aceptación se traducen directamente en tests; protege el límite de intentos (coste) sin gastar tokens. La salida del LLM no es determinista, así que se evalúa aparte | TDD en todo el código; tests solo al final |
+| D-16 | **Monorepo con npm workspaces** (`backend`, `frontend`) y un único `package-lock.json` en la raíz | Un solo `npm install`, hooks compartidos y un solo repo para el TFM | Repos separados; pnpm/Turborepo (complejidad innecesaria ahora) |
+| D-17 | **ESLint se ejecuta por workspace** desde lint-staged (`npm exec --workspace <pkg> -- eslint`) | ESLint 9 busca el `eslint.config.mjs` desde el directorio de ejecución (la raíz), donde no hay ninguno; ejecutarlo dentro del paquete usa su config y su versión | Config ESLint única en la raíz (mezclaría reglas Node y Next.js) |
+| D-18 | **Frontend con ESLint 9**, backend con ESLint 10 | `eslint-plugin-react` (vía `eslint-config-next@16`) usa `context.getFilename()`, eliminado en ESLint 10. Revisar al actualizar `eslint-config-next` | Frontend en ESLint 10 (rompe el lint) |
+| D-19 | **`main` protegida** en GitHub: PR obligatorio antes de mergear, sin force push | Cumple el flujo de ramas de `05-convenciones.md`. Con una sola persona se exigen 0 aprobaciones (no se puede aprobar el propio PR) | Push directo a `main` |
+| D-20 | `next`, `react` y `react-dom` se instalan en `frontend` desde la Fase 0 | `eslint-config-next` carga un parser que vive dentro de `next`; sin él el lint del frontend falla | Excluir el frontend del lint hasta la Fase 4 (dejaba la config sin validar) |
 
 ## Abiertas
 
+- [ ] **Actualizar Node a 22 LTS** (el proyecto declara `>=22`; `lint-staged@17` pide `>=22.22.1`). Hoy se trabaja con Node 20.20.2, que funciona pero emite avisos `EBADENGINE`.
+- [ ] **5 vulnerabilidades altas en `npm audit`** (cadena `eslint-config-next` → … → `braces`, DoS por patrones glob). Solo afecta a tooling de lint, riesgo bajo. No usar `npm audit fix --force` (baja a `eslint-config-next@14`). Revisar con Dependabot en Fase 6.
 - [ ] Function calling nativo de OpenAI vs. orquestador intermediario (recomendado para MVP: orquestador).
 - [ ] Estructura exacta de `context/`, `agent.md` y configuración MCP (esta carpeta es la primera versión).
 - [ ] Medir coste real y tiempos del ciclo cuando el MVP funcione (validar RNF-5).
