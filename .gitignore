@@ -1,0 +1,38 @@
+# Dependencias
+node_modules/
+
+# Secretos: NUNCA al repositorio
+.env
+.env.*
+!.env.example
+
+# Builds
+dist/
+build/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Resultados de ejecución de Robot Framework
+output.xml
+log.html
+report.html
+results/
+
+# Terraform (Fase 7): el estado puede contener secretos
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Material de apoyo local (no forma parte del código)
+files.zip
+files/
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+npm-debug.log*

@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+.next
+coverage
+package-lock.json
+# Documentación: la mantenemos a mano, que Prettier no reformatee tablas ni texto
+*.md
+*.pdf
+*.zip
+# Terraform tiene su propio formateador (terraform fmt)
+infra/

@@ -1,0 +1,4 @@
+# Forzar saltos de línea LF en el repo (en Windows evita que los hooks de Husky rompan por CRLF)
+* text=auto eol=lf
+*.pdf binary
+*.zip binary

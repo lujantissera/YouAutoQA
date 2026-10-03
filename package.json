@@ -1,0 +1,24 @@
+{
+  "name": "youautoqa",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Agente de IA que genera, ejecuta y corrige tests de Robot Framework a partir de User Stories de Jira",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.0",
+    "prettier": "^3.6.0"
+  }
+}
