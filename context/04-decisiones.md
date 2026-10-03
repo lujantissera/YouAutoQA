@@ -27,6 +27,13 @@
 | D-18 | **Frontend con ESLint 9**, backend con ESLint 10 | `eslint-plugin-react` (vía `eslint-config-next@16`) usa `context.getFilename()`, eliminado en ESLint 10. Revisar al actualizar `eslint-config-next` | Frontend en ESLint 10 (rompe el lint) |
 | D-19 | **`main` protegida** en GitHub: PR obligatorio antes de mergear, sin force push | Cumple el flujo de ramas de `05-convenciones.md`. Con una sola persona se exigen 0 aprobaciones (no se puede aprobar el propio PR) | Push directo a `main` |
 | D-20 | `next`, `react` y `react-dom` se instalan en `frontend` desde la Fase 0 | `eslint-config-next` carga un parser que vive dentro de `next`; sin él el lint del frontend falla | Excluir el frontend del lint hasta la Fase 4 (dejaba la config sin validar) |
+| D-21 | Umbral de "mismo error" (US-10): **2 intentos seguidos** fallando por el mismo motivo ⇒ se considera falta de información. Valor configurable | Punto de partida simple; se ajusta con casos reales en la Fase 1 | 3 intentos (gasta más intentos y tokens antes de preguntar); similitud semántica (más complejo) |
+| D-22 | **Límite de tokens por job** además del máximo de intentos (TS-02), configurable | Barato de implementar; protege el gasto aunque el límite de intentos falle | Solo límite de intentos |
+| D-23 | En Jira se muestran **mensajes distintos para 404 y 403** (US-04) | App interna con usuarios autenticados: el riesgo de confirmar que una US existe es bajo y el mensaje distinto es más útil | Mismo mensaje para ambos |
+| D-24 | "Información relevante" de la US en el MVP = **descripción + criterios de aceptación** (US-03) | Es lo mínimo necesario para generar el test; ampliar (componentes, etiquetas, enlaces) más adelante | Traer todos los campos desde el inicio |
+| D-25 | Rol por defecto de un usuario nuevo: **QA Executer** (US-01) | Principio de mínimo privilegio; un Admin sube el rol después | QA Controller por defecto |
+| D-26 | Las cuatro historias técnicas (**TS-01 a TS-04**) se mantienen como User Stories | Hacen trazables seguridad, coste, lint y CI. TS-03 ya está cumplida en la Fase 0 | Dejarlas como RNF |
+| D-27 | Prioridades MoSCoW de `06-user-stories.md` confirmadas (Should: US-09, US-12, TS-02, TS-04) | Coherentes con el walking skeleton: el MVP sobrevive sin ellas si el tiempo aprieta | — |
 
 ## Abiertas
 

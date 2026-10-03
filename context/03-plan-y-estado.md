@@ -11,7 +11,7 @@
 | Fase | Contenido | Sesiones est. | Estado |
 |---|---|---|---|
 | Pre | Requisitos, plan, `CLAUDE.md` y `context/` | — | ✅ hecho |
-| Pre | User Stories con criterios de aceptación | 1 | 🔜 siguiente |
+| Pre | User Stories con criterios de aceptación (17 US en `06-user-stories.md`) | 1 | ✅ hecho (preguntas resueltas: D-21 a D-27) |
 | 0 | Setup del repo: monorepo, Husky + lint-staged + ESLint + Prettier, README, ramas | 0.5–1 | ✅ hecho |
 | 1 | Core del agente en LangGraph (sin UI ni Jira) contra el runner Docker | 2–3 | ⬜ |
 | 2 | Integración Jira vía MCP Atlassian + manejo 404/403 | 1 | ⬜ |
@@ -37,5 +37,4 @@ Al terminar la Fase 4 hay un walking skeleton usable desde el navegador: buen mo
 - Revisar las 5 vulnerabilidades de `npm audit` (solo tooling de lint) en la Fase 6.
 
 ## Siguiente acción
-1. Escribir las User Stories de RF-1 a RF-9 con criterios de aceptación (`06-user-stories.md`).
-2. Arrancar la Fase 1: core del agente en LangGraph contra el runner Docker.
+1. Arrancar la Fase 1 con US-05, US-06, US-07, US-10 y TS-01/TS-02: core del agente en LangGraph contra el runner Docker.
