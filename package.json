@@ -14,7 +14,8 @@
     "prepare": "husky",
     "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
     "husky": "^9.1.7",

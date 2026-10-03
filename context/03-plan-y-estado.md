@@ -38,6 +38,7 @@ Al terminar la Fase 4 hay un walking skeleton usable desde el navegador: buen mo
 ## Siguiente acción
 1. **Fase 1 en curso** (US-05, US-06, US-07, US-10 y TS-01/TS-02). Diseño del grafo cerrado (D-28 a D-32). Orden de trabajo:
    1. Estado + grafo con dobles (`FakeLlm`, `FakeRunner`) y tests Vitest de US-07 y US-10.
+      - **Punto de parada:** rama `feature/rf-6-agent-graph`. Escritos `config.ts`, `ports.ts`, `state.ts` y `routing.test.ts` (7 tests en rojo). Falta `routing.ts` con `routeAfterRun(state, config)` (orden: PASS → `done`; intentos o tokens agotados → `fail`; si no → `classify`), luego `routeAfterClassify`, la regla de "mismo error" (D-31) y el ensamblado del grafo con `FakeLlm`/`FakeRunner`.
    2. `rf-runner` en Docker (timeout, límites, sin secretos).
    3. Adaptador OpenAI (`openai` SDK) y prompts.
    4. Probar con 2–3 US de ejemplo (pasa / necesita correcciones / ambigua).
