@@ -45,6 +45,14 @@
 - Fallo por falta de info (error repetido entre intentos) → `pedir_aclaracion`; al responder, se añade al contexto y el contador vuelve a 0.
 - Intentos = 5 → fin (`fail`).
 
+**Estado (campos)**: `usText`, `clarifications[]`, `robotCode`, `attempt` (se reinicia a 0 tras aclaración), `lastRun {result, logs, timedOut}`, `attempts[]` (historial con clasificación), `tokensUsed`, `status`.
+
+**Límites**: se comprueban en la arista tras `ejecutar_test`, antes de gastar más: `attempt >= MAX_ATTEMPTS` o límite de tokens ⇒ `fail` (D-22, D-28).
+
+**Clasificación (D-31)**: regla determinista (mismo error normalizado en 2 intentos seguidos ⇒ falta de info) + triage con LLM de salida estructurada para el resto.
+
+**Puertos (D-30)**: `LlmPort.generate(prompt) → {text, tokensIn, tokensOut}` y `RunnerPort.run(robotCode, timeout) → {result, logs, timedOut}`. El grafo solo conoce estas interfaces.
+
 **Idea de costes**: evaluar un modelo más económico para el triage de errores (`clasificar_fallo`) y uno con mejor razonamiento para generar/corregir.
 
 ## Modelo de datos mínimo (a refinar en Fase 3)
