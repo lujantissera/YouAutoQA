@@ -33,8 +33,11 @@ Al terminar la Fase 4 hay un walking skeleton usable desde el navegador: buen mo
 - Decisiones D-16 a D-20 registradas en `04-decisiones.md`.
 
 ## Pendientes heredados de la Fase 0
-- Actualizar Node a 22 LTS (hoy Node 20.20.2).
 - Revisar las 5 vulnerabilidades de `npm audit` (solo tooling de lint) en la Fase 6.
 
 ## Siguiente acción
-1. Arrancar la Fase 1 con US-05, US-06, US-07, US-10 y TS-01/TS-02: core del agente en LangGraph contra el runner Docker.
+1. **Fase 1 en curso** (US-05, US-06, US-07, US-10 y TS-01/TS-02). Diseño del grafo cerrado (D-28 a D-32). Orden de trabajo:
+   1. Estado + grafo con dobles (`FakeLlm`, `FakeRunner`) y tests Vitest de US-07 y US-10.
+   2. `rf-runner` en Docker (timeout, límites, sin secretos).
+   3. Adaptador OpenAI (`openai` SDK) y prompts.
+   4. Probar con 2–3 US de ejemplo (pasa / necesita correcciones / ambigua).

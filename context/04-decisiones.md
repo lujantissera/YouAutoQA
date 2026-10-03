@@ -34,10 +34,15 @@
 | D-25 | Rol por defecto de un usuario nuevo: **QA Executer** (US-01) | Principio de mínimo privilegio; un Admin sube el rol después | QA Controller por defecto |
 | D-26 | Las cuatro historias técnicas (**TS-01 a TS-04**) se mantienen como User Stories | Hacen trazables seguridad, coste, lint y CI. TS-03 ya está cumplida en la Fase 0 | Dejarlas como RNF |
 | D-27 | Prioridades MoSCoW de `06-user-stories.md` confirmadas (Should: US-09, US-12, TS-02, TS-04) | Coherentes con el walking skeleton: el MVP sobrevive sin ellas si el tiempo aprieta | — |
+| D-28 | **Intento = una ejecución** del test. Máximo 5 ejecuciones por job (la generación inicial es el intento 1, hasta 4 correcciones) | Definición simple y medible; el límite se comprueba antes de cada ejecución | 1 generación + 5 correcciones |
+| D-29 | LLM mediante el **SDK oficial `openai`** detrás de un `LlmPort` | Se aprende la API directamente (structured outputs, tokens, errores) y el puerto permite añadir luego un adaptador `@langchain/openai` y comparar | `@langchain/openai` desde el inicio (más abstracción, menos visibilidad) |
+| D-30 | El grafo depende de **puertos** (`LlmPort`, `RunnerPort`), nunca de OpenAI o Docker. Los tests usan dobles (`FakeLlm`, `FakeRunner`) | Tests deterministas, CI sin llamadas reales al LLM (TS-04.3) | Dependencias directas en los nodos |
+| D-31 | `clasificar_fallo` se divide en una **regla determinista** (mismo error normalizado en 2 intentos seguidos ⇒ falta de info) y un **triage con LLM** con salida estructurada para el resto | La parte determinista se testea sin gastar tokens; el LLM solo decide los casos difusos | Clasificar todo con el LLM |
+| D-32 | `interrupt` de LangGraph con **checkpointer en memoria** en la Fase 1; en la Fase 3 pasa a Postgres | Permite validar el flujo de aclaración sin BBDD todavía | Persistencia desde la Fase 1 |
 
 ## Abiertas
 
-- [ ] **Actualizar Node a 22 LTS** (el proyecto declara `>=22`; `lint-staged@17` pide `>=22.22.1`). Hoy se trabaja con Node 20.20.2, que funciona pero emite avisos `EBADENGINE`.
+- [x] ~~Actualizar Node a 22 LTS~~ — hecho (Node 22.23.3 vía nvm-windows; sin avisos `EBADENGINE`).
 - [ ] **5 vulnerabilidades altas en `npm audit`** (cadena `eslint-config-next` → … → `braces`, DoS por patrones glob). Solo afecta a tooling de lint, riesgo bajo. No usar `npm audit fix --force` (baja a `eslint-config-next@14`). Revisar con Dependabot en Fase 6.
 - [ ] Function calling nativo de OpenAI vs. orquestador intermediario (recomendado para MVP: orquestador).
 - [ ] Estructura exacta de `context/`, `agent.md` y configuración MCP (esta carpeta es la primera versión).
