@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentConfig } from './config.js';
-import { routeAfterRun } from './routing.js';
+import { routeAfterClassify, routeAfterRun } from './routing.js';
 import type { AgentStateType } from './state.js';
 
 const config: AgentConfig = { maxAttempts: 5, maxTokens: 50_000, executionTimeoutSeconds: 120 };
@@ -63,5 +63,23 @@ describe('routeAfterRun', () => {
       lastRun: { result: 'FAIL', logs: '', timedOut: true },
     });
     expect(routeAfterRun(state, config)).toBe('classify');
+  });
+});
+
+// US-10: tras clasificar, un fallo técnico se corrige y la falta de información se pregunta.
+describe('routeAfterClassify', () => {
+  it('manda a corregir un fallo técnico (US-10.2)', () => {
+    const state = makeState({ failureKind: 'technical' });
+    expect(routeAfterClassify(state)).toBe('fix');
+  });
+
+  it('manda a pedir aclaración si falta información (US-10.4)', () => {
+    const state = makeState({ failureKind: 'missing_info' });
+    expect(routeAfterClassify(state)).toBe('ask');
+  });
+
+  it('lanza un error si el fallo no fue clasificado (bug del programa)', () => {
+    const state = makeState({ failureKind: null });
+    expect(() => routeAfterClassify(state)).toThrow();
   });
 });
