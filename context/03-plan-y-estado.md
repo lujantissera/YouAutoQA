@@ -37,8 +37,11 @@ Al terminar la Fase 4 hay un walking skeleton usable desde el navegador: buen mo
 
 ## Siguiente acción
 1. **Fase 1 en curso** (US-05, US-06, US-07, US-10 y TS-01/TS-02). Diseño del grafo cerrado (D-28 a D-32). Orden de trabajo:
-   1. Estado + grafo con dobles (`FakeLlm`, `FakeRunner`) y tests Vitest de US-07 y US-10.
-      - **Punto de parada:** rama `feature/rf-6-agent-graph`. Escritos `config.ts`, `ports.ts`, `state.ts` y `routing.test.ts` (7 tests en rojo). Falta `routing.ts` con `routeAfterRun(state, config)` (orden: PASS → `done`; intentos o tokens agotados → `fail`; si no → `classify`), luego `routeAfterClassify`, la regla de "mismo error" (D-31) y el ensamblado del grafo con `FakeLlm`/`FakeRunner`.
-   2. `rf-runner` en Docker (timeout, límites, sin secretos).
+   1. ✅ Estado + grafo con dobles (`FakeLlm`, `FakeRunner`) y tests Vitest de US-07 y US-10. 22 tests en verde (`npm test`). Diagrama en `context/diagramas/grafo-agente.{svg,pdf}`.
+      - Pendiente de esta parte (a propósito): triage con LLM de salida estructurada (D-31, llega con el adaptador OpenAI) y limpiar/validar la respuesta del LLM (US-05.2/05.3).
+   2. 🔄 `rf-runner` en Docker (timeout, límites, sin secretos). **Punto de parada** (rama `feature/rf-6-agent-graph`):
+      - Hecho: D-34 (Browser Library) y D-35 (imagen oficial `marketsquare/robotframework-browser:20.6.0`, usuario `pwuser`). Probado a mano en Docker Desktop: `rf-runner/examples/smoke.robot` da PASS y `smoke-fail.robot` da FAIL; el código de salida distingue ambos.
+      - Comando manual de referencia: `docker run --rm -v "${PWD}/rf-runner/examples:/work" --ipc=host --user pwuser marketsquare/robotframework-browser:20.6.0 bash -c "robot --outputdir /work/results /work/smoke.robot"`.
+      - Falta: `DockerRunner` en el backend que implemente `RunnerPort` (carpeta temporal por ejecución, `--memory`/`--cpus`/`--pids-limit`, timeout con kill del contenedor, sin variables de entorno con secretos, URL de la AUT por configuración) y su test de integración contra Docker real en `backend/tests/integration/` (D-33). Probar si hace falta el perfil `seccomp` de Playwright.
    3. Adaptador OpenAI (`openai` SDK) y prompts.
    4. Probar con 2–3 US de ejemplo (pasa / necesita correcciones / ambigua).
