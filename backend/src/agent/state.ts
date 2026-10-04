@@ -10,6 +10,9 @@ export interface Clarification {
 }
 
 export interface AttemptRecord {
+  /** Posición en todo el historial del job (1, 2, 3...). No se reinicia con una aclaración. */
+  id: number;
+  /** Nº de intento dentro del ciclo actual. SÍ se reinicia con una aclaración (D-14). */
   attempt: number;
   robotCode: string;
   run: RunResult;
@@ -22,6 +25,17 @@ export interface AttemptRecord {
 // - sum: suma (tokens).
 const concat = <T>(left: T[], right: T[]): T[] => left.concat(right);
 const overwrite = <T>(_left: T, right: T): T => right;
+// Historial de intentos: añade los nuevos y sustituye los que ya existen (mismo `id`).
+// Así classifyFailure puede completar el registro que creó runTest con su clasificación.
+const upsertAttempts = (left: AttemptRecord[], right: AttemptRecord[]): AttemptRecord[] => {
+  const merged = [...left];
+  for (const record of right) {
+    const index = merged.findIndex((existing) => existing.id === record.id);
+    if (index === -1) merged.push(record);
+    else merged[index] = record;
+  }
+  return merged;
+};
 const sum = (left: number, right: number): number => left + right;
 
 // El "maletín" que viaja entre nodos. Cada nodo devuelve solo los campos que cambia.
@@ -32,7 +46,7 @@ export const AgentState = Annotation.Root({
   // Se reinicia a 0 tras una aclaración del usuario (D-14).
   attempt: Annotation<number>({ reducer: overwrite, default: () => 0 }),
   lastRun: Annotation<RunResult | null>({ reducer: overwrite, default: () => null }),
-  attempts: Annotation<AttemptRecord[]>({ reducer: concat, default: () => [] }),
+  attempts: Annotation<AttemptRecord[]>({ reducer: upsertAttempts, default: () => [] }),
   tokensUsed: Annotation<number>({ reducer: sum, default: () => 0 }),
   failureKind: Annotation<FailureKind | null>({ reducer: overwrite, default: () => null }),
   question: Annotation<string | null>({ reducer: overwrite, default: () => null }),

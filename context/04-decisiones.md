@@ -39,6 +39,7 @@
 | D-30 | El grafo depende de **puertos** (`LlmPort`, `RunnerPort`), nunca de OpenAI o Docker. Los tests usan dobles (`FakeLlm`, `FakeRunner`) | Tests deterministas, CI sin llamadas reales al LLM (TS-04.3) | Dependencias directas en los nodos |
 | D-31 | `clasificar_fallo` se divide en una **regla determinista** (mismo error normalizado en 2 intentos seguidos ⇒ falta de info) y un **triage con LLM** con salida estructurada para el resto | La parte determinista se testea sin gastar tokens; el LLM solo decide los casos difusos | Clasificar todo con el LLM |
 | D-32 | `interrupt` de LangGraph con **checkpointer en memoria** en la Fase 1; en la Fase 3 pasa a Postgres | Permite validar el flujo de aclaración sin BBDD todavía | Persistencia desde la Fase 1 |
+| D-33 | **Tests unitarios junto al código** (`x.ts` + `x.test.ts`) y dobles en `src/agent/testing/`. Los tests de integración (API + Postgres, Fase 3) irán en `backend/tests/integration/`. Al crear el Dockerfile se añadirá un `tsconfig.build.json` que excluya `*.test.ts` y `testing/` del `dist/` | Es lo más cómodo con Vitest y evita mantener una estructura espejo; los tests lentos con infraestructura sí merecen carpeta y ejecución propias | Carpeta `tests/` espejo para todo |
 
 ## Abiertas
 
