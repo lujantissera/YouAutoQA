@@ -6,8 +6,9 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": "vitest run --exclude \"**/*.integration.test.ts\"",
+    "test:watch": "vitest",
+    "test:integration": "vitest run integration"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
