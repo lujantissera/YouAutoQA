@@ -43,6 +43,7 @@
 | D-34 | Los tests generados usan **Browser Library (Playwright)** | Esperas automáticas: menos fallos falsos por tiempos, que son los que más intentos (y tokens) gastarían; es el estándar emergente en Robot Framework | SeleniumLibrary (más veterana; ver decisión abierta de soporte a proyectos Selenium) |
 | D-35 | El `rf-runner` se basa en la **imagen oficial `marketsquare/robotframework-browser` con versión fija (20.6.0)**, ejecutada como `pwuser` | Trae Python, Robot, Playwright y navegadores ya integrados y probados; correr como no-root es requisito de la imagen y del aislamiento. Versión fija para reproducibilidad | Montar Playwright a mano sobre `python:slim` (más trabajo y más fallos); usar `latest` (cambia sin avisar) |
 | D-36 | El runner usa `--shm-size=512m` (no `--ipc=host`), `--security-opt=no-new-privileges`, `--user pwuser`, y lanza `robot` sin pasar por una shell. Verificado con Chromium real | `--ipc=host` comparte memoria con el anfitrión y rompe el aislamiento; `--shm-size` da a Chromium lo que necesita sin esa apertura. Argumentos como lista (sin shell) evitan inyección de comandos | `--ipc=host` (recomendación de la imagen); `bash -c "..."` |
+| D-37 | Dos modelos de OpenAI por variable de entorno: `OPENAI_MODEL_GENERATE=gpt-6.1-sol` para generar/corregir y `OPENAI_MODEL_TRIAGE=gpt-6-luna` para preguntas de aclaración y triaje. Adaptador sobre la **Responses API** | Sol da casi la calidad de Astra por ~1/5 del coste (≈0,07 USD vs ≈0,36 USD por ciclo de 20k tokens, a precios de la doc de oct-2026); Luna cuesta ≈0,004 USD en tareas cortas. Responses es la API recomendada para proyectos nuevos | Astra para todo (5× más caro sin necesidad demostrada); un solo modelo; Chat Completions (API heredada) |
 
 ## Abiertas
 
@@ -57,7 +58,7 @@
 - [ ] Diseño de módulos Terraform (archivos, variables, entornos) en Fase 7.
 - [ ] Estrategia de aislamiento y límites del runner (seguridad).
 - [ ] Criterio exacto de `clasificar_fallo`: cómo se detecta "error repetido" entre intentos.
-- [ ] Modelo de OpenAI a usar para generar/corregir vs. para triage.
+- [ ] Validar con datos reales (Fase 1, paso 4) si Sol es suficiente para generar/corregir o si compensa subir a Astra; ajustar D-37.
 
 ## Plantilla para nuevas decisiones
 ```

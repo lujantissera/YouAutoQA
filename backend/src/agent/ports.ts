@@ -5,6 +5,8 @@
 export interface LlmRequest {
   system: string;
   user: string;
+  /** Qué modelo usar: 'generate' (potente, por defecto) o 'triage' (barato, tareas cortas). */
+  tier?: 'generate' | 'triage';
 }
 
 export interface LlmResponse {
