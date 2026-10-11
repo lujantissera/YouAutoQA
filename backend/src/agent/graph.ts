@@ -24,10 +24,12 @@ export function buildGraph(deps: AgentDeps) {
         fail: 'markFailed',
         classify: 'classifyFailure',
       })
-      // Rombo 2.
+      // Rombo 2. `retry` vuelve a ejecutar el mismo test sin pasar por el LLM (fallo de entorno).
       .addConditionalEdges('classifyFailure', routeAfterClassify, {
         fix: 'fixTest',
         ask: 'askClarification',
+        retry: 'runTest',
+        abort: 'markFailed',
       })
       .addEdge('fixTest', 'runTest')
       .addEdge('askClarification', 'generateTest')

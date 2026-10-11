@@ -17,13 +17,16 @@ export function routeAfterRun(state: AgentStateType, config: AgentConfig): RunRo
   return 'classify';
 }
 
-export type ClassifyRoute = 'fix' | 'ask';
+export type ClassifyRoute = 'fix' | 'ask' | 'retry' | 'abort';
 
-// Arista condicional tras `classifyFailure`: corregir el test o preguntar al usuario.
+// Arista condicional tras `classifyFailure`: corregir el test, preguntar al usuario, reintentar
+// el mismo test (fallo de entorno) o abortar (segundo fallo de entorno seguido).
 // Si llega sin clasificar es un bug del programa, no un caso de negocio: fallamos en
 // voz alta en vez de elegir una ruta "por defecto" que escondería el error.
 export function routeAfterClassify(state: AgentStateType): ClassifyRoute {
   if (state.failureKind === 'technical') return 'fix';
+  // Un fallo de entorno con `failureReason` es el segundo seguido: classifyFailure ya decidió abortar.
+  if (state.failureKind === 'environment') return state.failureReason !== null ? 'abort' : 'retry';
   if (state.failureKind === 'missing_info') return 'ask';
   throw new Error('routeAfterClassify called before the failure was classified');
 }

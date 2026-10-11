@@ -16,6 +16,7 @@ function makeState(overrides: Partial<AgentStateType>): AgentStateType {
     attempts: [],
     tokensUsed: 0,
     failureKind: null,
+    failureReason: null,
     question: null,
     status: 'running',
     ...overrides,
@@ -76,6 +77,16 @@ describe('routeAfterClassify', () => {
   it('manda a pedir aclaración si falta información (US-10.4)', () => {
     const state = makeState({ failureKind: 'missing_info' });
     expect(routeAfterClassify(state)).toBe('ask');
+  });
+
+  it('reintenta el mismo test ante un primer fallo de entorno, sin pasar por el LLM', () => {
+    const state = makeState({ failureKind: 'environment', failureReason: null });
+    expect(routeAfterClassify(state)).toBe('retry');
+  });
+
+  it('aborta si el fallo de entorno ya trae un motivo (era el segundo seguido)', () => {
+    const state = makeState({ failureKind: 'environment', failureReason: 'App unreachable' });
+    expect(routeAfterClassify(state)).toBe('abort');
   });
 
   it('lanza un error si el fallo no fue clasificado (bug del programa)', () => {

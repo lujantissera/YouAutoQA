@@ -2,7 +2,9 @@ import { Annotation } from '@langchain/langgraph';
 import type { RunResult } from './ports.js';
 
 export type JobStatus = 'generating' | 'running' | 'done' | 'fail' | 'awaiting_clarification';
-export type FailureKind = 'technical' | 'missing_info';
+// technical: el LLM puede corregirlo · missing_info: hay que preguntar al usuario ·
+// environment: la app no carga / timeout; ni corregir ni preguntar sirve (se reintenta).
+export type FailureKind = 'technical' | 'missing_info' | 'environment';
 
 export interface Clarification {
   role: 'agent' | 'user';
@@ -49,6 +51,8 @@ export const AgentState = Annotation.Root({
   attempts: Annotation<AttemptRecord[]>({ reducer: upsertAttempts, default: () => [] }),
   tokensUsed: Annotation<number>({ reducer: sum, default: () => 0 }),
   failureKind: Annotation<FailureKind | null>({ reducer: overwrite, default: () => null }),
+  // Motivo comprensible cuando el job se aborta por una causa que no es el límite de intentos.
+  failureReason: Annotation<string | null>({ reducer: overwrite, default: () => null }),
   question: Annotation<string | null>({ reducer: overwrite, default: () => null }),
   status: Annotation<JobStatus>({ reducer: overwrite, default: () => 'generating' }),
 });

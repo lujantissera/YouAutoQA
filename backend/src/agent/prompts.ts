@@ -40,6 +40,7 @@ export function buildFixRequest(state: AgentStateType): LlmRequest {
 export function buildQuestionRequest(state: AgentStateType): LlmRequest {
   const logs = state.lastRun?.logs ?? '';
   return {
+    tier: 'triage',
     system: ROBOT_RULES.replace(
       'You write Robot Framework tests.',
       'You review failing Robot Framework tests.',

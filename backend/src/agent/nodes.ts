@@ -1,8 +1,9 @@
 import { interrupt } from '@langchain/langgraph';
 import type { AgentConfig } from './config.js';
-import { isRepeatedError } from './failure.js';
-import type { LlmPort, LlmResponse, RunnerPort } from './ports.js';
+import { isCodeError, isEnvironmentFailure, isRepeatedError } from './failure.js';
+import type { LlmPort, LlmResponse, RunnerPort, RunResult } from './ports.js';
 import { buildFixRequest, buildGenerateRequest, buildQuestionRequest } from './prompts.js';
+import { EMPTY_TEST_LOGS, extractRobotCode } from './robot-code.js';
 import type { AgentStateType } from './state.js';
 
 // Dependencias que el grafo necesita del exterior: siempre puertos, nunca OpenAI/Docker directos.
@@ -14,6 +15,11 @@ export interface AgentDeps {
 
 type StateUpdate = Partial<AgentStateType>;
 
+const EMPTY_TEST_RESULT: RunResult = { result: 'FAIL', logs: EMPTY_TEST_LOGS, timedOut: false };
+
+const ENVIRONMENT_ABORT_REASON =
+  'The application under test could not be reached, or timed out, in two consecutive runs.';
+
 const tokensOf = (response: LlmResponse): number => response.tokensIn + response.tokensOut;
 
 // Un nodo es una función (estado) -> cambios. Se crean con una "factory" para inyectar las dependencias.
@@ -21,12 +27,21 @@ export function createNodes({ llm, runner, config }: AgentDeps) {
   return {
     async generateTest(state: AgentStateType): Promise<StateUpdate> {
       const response = await llm.generate(buildGenerateRequest(state));
-      return { robotCode: response.text, tokensUsed: tokensOf(response), status: 'generating' };
+      return {
+        robotCode: extractRobotCode(response.text) ?? '',
+        tokensUsed: tokensOf(response),
+        status: 'generating',
+      };
     },
 
     async runTest(state: AgentStateType): Promise<StateUpdate> {
       const attempt = state.attempt + 1;
-      const run = await runner.run(state.robotCode, config.executionTimeoutSeconds);
+      // US-05.3: si el LLM no devolvió un test interpretable (robotCode vacío), el intento
+      // falla sin gastar un contenedor de Docker, y el ciclo de corrección sigue como siempre.
+      const run =
+        state.robotCode === ''
+          ? EMPTY_TEST_RESULT
+          : await runner.run(state.robotCode, config.executionTimeoutSeconds);
       const record = {
         id: state.attempts.length + 1,
         attempt,
@@ -45,7 +60,24 @@ export function createNodes({ llm, runner, config }: AgentDeps) {
       // aclaración el contador vuelve a 0 y el fallo previo ya no cuenta (D-14).
       const previous = state.attempts.at(-2);
       const comparable = previous !== undefined && previous.attempt === current.attempt - 1;
-      const repeated = comparable && isRepeatedError(previous.run.logs, current.run.logs);
+
+      // 1.º filtro: fallo de entorno. Sin LLM y sin preguntar. El primero se reintenta;
+      // si el intento anterior (mismo ciclo) también fue de entorno, se aborta con motivo.
+      if (isEnvironmentFailure(current.run)) {
+        const persistent = comparable && previous.failureKind === 'environment';
+        return {
+          failureKind: 'environment',
+          failureReason: persistent ? ENVIRONMENT_ABORT_REASON : null,
+          attempts: [{ ...current, failureKind: 'environment' }],
+        };
+      }
+
+      // 2.º filtro: "mismo error" solo cuenta como falta de información si NO es un error de
+      // código (sintaxis, keyword inexistente, respuesta vacía): esos los corrige el LLM.
+      const repeated =
+        comparable &&
+        !isCodeError(current.run.logs) &&
+        isRepeatedError(previous.run.logs, current.run.logs);
 
       if (!repeated) {
         return { failureKind: 'technical', attempts: [{ ...current, failureKind: 'technical' }] };
@@ -64,7 +96,11 @@ export function createNodes({ llm, runner, config }: AgentDeps) {
 
     async fixTest(state: AgentStateType): Promise<StateUpdate> {
       const response = await llm.generate(buildFixRequest(state));
-      return { robotCode: response.text, tokensUsed: tokensOf(response), status: 'running' };
+      return {
+        robotCode: extractRobotCode(response.text) ?? '',
+        tokensUsed: tokensOf(response),
+        status: 'running',
+      };
     },
 
     // `interrupt` congela el grafo aquí y devuelve la pregunta a quien lo invocó. Al reanudar con
