@@ -1,6 +1,11 @@
 import { END, MemorySaver, START, StateGraph } from '@langchain/langgraph';
 import { createNodes, type AgentDeps } from './nodes.js';
-import { routeAfterClassify, routeAfterRun } from './routing.js';
+import {
+  routeAfterClassify,
+  routeAfterFix,
+  routeAfterRun,
+  routeAfterStoryCheck,
+} from './routing.js';
 import { AgentState } from './state.js';
 
 // Aquí se "dibuja" el diagrama: nodos (cajas) + aristas (flechas) + aristas condicionales (rombos).
@@ -9,6 +14,7 @@ export function buildGraph(deps: AgentDeps) {
 
   return (
     new StateGraph(AgentState)
+      .addNode('checkStory', nodes.checkStory)
       .addNode('generateTest', nodes.generateTest)
       .addNode('runTest', nodes.runTest)
       .addNode('classifyFailure', nodes.classifyFailure)
@@ -16,7 +22,12 @@ export function buildGraph(deps: AgentDeps) {
       .addNode('askClarification', nodes.askClarification)
       .addNode('markDone', nodes.markDone)
       .addNode('markFailed', nodes.markFailed)
-      .addEdge(START, 'generateTest')
+      .addEdge(START, 'checkStory')
+      // Rombo 0 (D-40): ¿tiene la US información suficiente? Si no, se pregunta antes de generar.
+      .addConditionalEdges('checkStory', routeAfterStoryCheck, {
+        generate: 'generateTest',
+        ask: 'askClarification',
+      })
       .addEdge('generateTest', 'runTest')
       // Rombo 1: la función decide y el mapa traduce su respuesta al nombre del nodo destino.
       .addConditionalEdges('runTest', (state) => routeAfterRun(state, deps.config), {
@@ -31,7 +42,11 @@ export function buildGraph(deps: AgentDeps) {
         retry: 'runTest',
         abort: 'markFailed',
       })
-      .addEdge('fixTest', 'runTest')
+      // Rombo 3 (D-41): ¿el modelo corrigió el test o pidió información al usuario?
+      .addConditionalEdges('fixTest', routeAfterFix, {
+        run: 'runTest',
+        ask: 'askClarification',
+      })
       .addEdge('askClarification', 'generateTest')
       .addEdge('markDone', END)
       .addEdge('markFailed', END)

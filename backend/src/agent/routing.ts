@@ -17,6 +17,21 @@ export function routeAfterRun(state: AgentStateType, config: AgentConfig): RunRo
   return 'classify';
 }
 
+export type StoryCheckRoute = 'generate' | 'ask';
+
+// Arista condicional tras `checkStory` (D-40): si dejó una pregunta, se pausa antes de generar.
+export function routeAfterStoryCheck(state: AgentStateType): StoryCheckRoute {
+  return state.question !== null ? 'ask' : 'generate';
+}
+
+export type FixRoute = 'run' | 'ask';
+
+// Arista condicional tras `fixTest` (D-41): si el modelo devolvió una pregunta en vez de código,
+// se pausa para aclararla; si no, se ejecuta el test corregido.
+export function routeAfterFix(state: AgentStateType): FixRoute {
+  return state.question !== null ? 'ask' : 'run';
+}
+
 export type ClassifyRoute = 'fix' | 'ask' | 'retry' | 'abort';
 
 // Arista condicional tras `classifyFailure`: corregir el test, preguntar al usuario, reintentar

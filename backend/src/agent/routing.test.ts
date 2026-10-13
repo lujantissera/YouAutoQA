@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentConfig } from './config.js';
-import { routeAfterClassify, routeAfterRun } from './routing.js';
+import {
+  routeAfterClassify,
+  routeAfterFix,
+  routeAfterRun,
+  routeAfterStoryCheck,
+} from './routing.js';
 import type { AgentStateType } from './state.js';
 
-const config: AgentConfig = { maxAttempts: 5, maxTokens: 50_000, executionTimeoutSeconds: 120 };
+const config: AgentConfig = {
+  maxAttempts: 5,
+  maxTokens: 50_000,
+  executionTimeoutSeconds: 120,
+  storyCheck: false,
+};
 
 // Construye un estado válido y deja cambiar solo lo que cada test necesita.
 function makeState(overrides: Partial<AgentStateType>): AgentStateType {
@@ -64,6 +74,28 @@ describe('routeAfterRun', () => {
       lastRun: { result: 'FAIL', logs: '', timedOut: true },
     });
     expect(routeAfterRun(state, config)).toBe('classify');
+  });
+});
+
+// D-40: antes de generar, si la comprobación de la US dejó una pregunta, se pausa para aclararla.
+describe('routeAfterStoryCheck', () => {
+  it('genera el test si la US está lista (sin pregunta pendiente)', () => {
+    expect(routeAfterStoryCheck(makeState({ question: null }))).toBe('generate');
+  });
+
+  it('pide aclaración si la comprobación dejó una pregunta', () => {
+    expect(routeAfterStoryCheck(makeState({ question: '¿Qué credenciales uso?' }))).toBe('ask');
+  });
+});
+
+// D-41: al corregir, el modelo puede devolver una pregunta en vez de código.
+describe('routeAfterFix', () => {
+  it('vuelve a ejecutar el test corregido si no hay pregunta pendiente', () => {
+    expect(routeAfterFix(makeState({ question: null }))).toBe('run');
+  });
+
+  it('pide aclaración si el modelo devolvió una pregunta en vez de código', () => {
+    expect(routeAfterFix(makeState({ question: '¿Dónde está la baja?' }))).toBe('ask');
   });
 });
 

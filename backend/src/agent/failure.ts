@@ -10,6 +10,9 @@ const ENVIRONMENT_PATTERNS = [
   /net::err_[a-z_]+/i,
   /page\.goto: timeout/i,
   /econnrefused|econnreset|enotfound|getaddrinfo/i,
+  // El propio runner no está disponible (Docker apagado): tampoco lo arregla ni el LLM ni el usuario.
+  /failed to connect to the docker api/i,
+  /cannot connect to the docker daemon/i,
 ];
 
 export function isEnvironmentFailure(run: RunResult): boolean {

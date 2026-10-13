@@ -29,6 +29,18 @@ describe('isEnvironmentFailure', () => {
     expect(isEnvironmentFailure(failWith('Error: connect ECONNREFUSED 127.0.0.1:3000'))).toBe(true);
   });
 
+  it('es verdadero si Docker no está disponible (Docker Desktop apagado en Windows)', () => {
+    const logs =
+      'failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; ' +
+      'check if the path is correct and if the daemon is running';
+    expect(isEnvironmentFailure(failWith(logs))).toBe(true);
+  });
+
+  it('es verdadero si el demonio de Docker no responde (Linux)', () => {
+    const logs = 'Cannot connect to the Docker daemon at unix:///var/run/docker.sock.';
+    expect(isEnvironmentFailure(failWith(logs))).toBe(true);
+  });
+
   it('es falso con un timeout esperando un selector: ahí el selector puede estar mal', () => {
     const logs = 'Click: Timeout 10000ms exceeded. waiting for locator("#login")';
     expect(isEnvironmentFailure(failWith(logs))).toBe(false);

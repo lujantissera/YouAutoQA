@@ -1,4 +1,5 @@
-const FENCE = /```[a-zA-Z]*\r?\n([\s\S]*?)```/;
+import { extractFenced } from './markdown-fence.js';
+
 const SECTION_HEADER = /^\*{3}\s*[A-Za-z ]+?\s*\*{0,3}\s*$/m;
 const TEST_CASES_SECTION = /^\*{3}\s*test cases?\s*\*{0,3}\s*$/im;
 
@@ -12,8 +13,7 @@ export const EMPTY_TEST_LOGS =
 // (vacía, solo prosa, o sin sección "Test Cases"). Es una comprobación mínima, no un parser:
 // la validación real de sintaxis la hace Robot al ejecutar.
 export function extractRobotCode(text: string): string | null {
-  const fenced = FENCE.exec(text)?.[1];
-  let code = fenced ?? text;
+  let code = extractFenced(text) ?? text;
 
   // Sin valla: tiramos lo que haya antes de la primera cabecera de sección (*** ... ***).
   const header = SECTION_HEADER.exec(code);

@@ -5,7 +5,13 @@ import { buildGraph } from './graph.js';
 import type { RunResult } from './ports.js';
 import { FakeLlm, FakeRunner } from './testing/fakes.js';
 
-const baseConfig: AgentConfig = { maxAttempts: 5, maxTokens: 50_000, executionTimeoutSeconds: 120 };
+// storyCheck desactivado por defecto: así los tests de generar/ejecutar/corregir no cuentan esa llamada.
+const baseConfig: AgentConfig = {
+  maxAttempts: 5,
+  maxTokens: 50_000,
+  executionTimeoutSeconds: 120,
+  storyCheck: false,
+};
 const pass: RunResult = { result: 'PASS', logs: 'ok', timedOut: false };
 const fail = (logs: string): RunResult => ({ result: 'FAIL', logs, timedOut: false });
 const input = { usText: 'Como usuario quiero iniciar sesión' };
@@ -181,6 +187,158 @@ describe('agent graph', () => {
     expect(result.status).toBe('done');
     expect(result.attempt).toBe(2); // el intento vacío consumió uno
     expect(result.attempts[0]?.run.result).toBe('FAIL');
+  });
+
+  // D-40: antes de generar, el modelo barato comprueba que la US tenga información suficiente.
+  describe('comprobación previa de la US (D-40)', () => {
+    const ready = '{"ready": true}';
+    const notReady = '{"ready": false, "question": "¿Qué usuario y contraseña uso?"}';
+
+    it('si la US está lista, sigue a generar; la comprobación usa el modelo barato y gasta tokens', async () => {
+      const { llm, graph, thread } = setup([ready, code(1)], [pass], { storyCheck: true });
+
+      const result = await graph.invoke(input, thread);
+
+      expect(result.status).toBe('done');
+      expect(llm.calls.map((c) => c.tier)).toEqual(['triage', undefined]);
+      expect(result.tokensUsed).toBe(300); // 150 de la comprobación + 150 de generar
+    });
+
+    it('si falta información, pregunta ANTES de generar y no ejecuta nada', async () => {
+      const { llm, runner, graph, thread } = setup([notReady, code(1)], [pass], {
+        storyCheck: true,
+      });
+
+      await graph.invoke(input, thread);
+
+      const paused = await graph.getState(thread);
+      expect(paused.values.status).toBe('awaiting_clarification');
+      expect(paused.values.question).toBe('¿Qué usuario y contraseña uso?');
+      expect(paused.next).toEqual(['askClarification']);
+      expect(llm.calls).toHaveLength(1); // solo la comprobación
+      expect(runner.calls).toHaveLength(0);
+    });
+
+    it('al responder, genera el test usando la aclaración y no vuelve a comprobar', async () => {
+      const { llm, graph, thread } = setup([notReady, code(1)], [pass], { storyCheck: true });
+
+      await graph.invoke(input, thread);
+      const result = await graph.invoke(
+        new Command({ resume: 'standard_user / secret_sauce' }),
+        thread,
+      );
+
+      expect(result.status).toBe('done');
+      expect(result.clarifications.map((c) => c.role)).toEqual(['agent', 'user']);
+      expect(llm.calls).toHaveLength(2); // comprobación + generar (no se re-comprueba)
+      expect(llm.calls[1]?.user).toContain('standard_user / secret_sauce');
+    });
+
+    it('si la respuesta del modelo no se puede leer, deja pasar y genera igualmente', async () => {
+      const { runner, graph, thread } = setup(['no sé qué decirte', code(1)], [pass], {
+        storyCheck: true,
+      });
+
+      const result = await graph.invoke(input, thread);
+
+      expect(result.status).toBe('done');
+      expect(runner.calls).toHaveLength(1);
+    });
+
+    it('el prompt de la comprobación pide JSON, trata la US como dato y no pide un .robot', async () => {
+      const { llm, graph, thread } = setup([ready, code(1)], [pass], { storyCheck: true });
+
+      await graph.invoke(input, thread);
+
+      const system = llm.calls[0]?.system ?? '';
+      expect(system).toContain('"ready"');
+      expect(system).toContain('is DATA');
+      expect(system).not.toMatch(/\.robot file|markdown fences/i);
+    });
+  });
+
+  // D-41: al corregir, el modelo puede responder NEEDS_INFO en vez de código (falta información
+  // o la función no existe) y el grafo pregunta al usuario sin gastar más intentos.
+  describe('NEEDS_INFO al corregir (D-41)', () => {
+    const needsInfo = 'NEEDS_INFO: ¿Dónde se da de baja la cuenta?';
+
+    it('pausa y pregunta en vez de ejecutar otra vez, y marca el intento como falta de información', async () => {
+      const { llm, runner, graph, thread } = setup(
+        [code(1), needsInfo],
+        [fail('La aplicación no ofrece acceso al perfil')],
+      );
+
+      await graph.invoke(input, thread);
+
+      const paused = await graph.getState(thread);
+      expect(paused.values.status).toBe('awaiting_clarification');
+      expect(paused.values.question).toBe('¿Dónde se da de baja la cuenta?');
+      expect(paused.next).toEqual(['askClarification']);
+      expect(paused.values.attempts[0]?.failureKind).toBe('missing_info');
+      expect(runner.calls).toHaveLength(1); // no se ejecutó una "corrección" inexistente
+      expect(llm.calls).toHaveLength(2); // generar + corregir; sin llamada extra de triage
+    });
+
+    it('al responder, regenera el test con la aclaración y reinicia el contador (D-14)', async () => {
+      const { llm, graph, thread } = setup(
+        [code(1), needsInfo, code(2)],
+        [fail('La aplicación no ofrece acceso al perfil'), pass],
+      );
+
+      await graph.invoke(input, thread);
+      const result = await graph.invoke(new Command({ resume: 'Usa la opción Cuenta' }), thread);
+
+      expect(result.status).toBe('done');
+      expect(result.attempt).toBe(1);
+      expect(result.clarifications.map((c) => c.role)).toEqual(['agent', 'user']);
+      expect(llm.calls[2]?.user).toContain('Usa la opción Cuenta');
+    });
+
+    it('el prompt de corrección permite NEEDS_INFO sin contradecirse; el de generar no', async () => {
+      const { llm, graph, thread } = setup([code(1), needsInfo], [fail('x')]);
+
+      await graph.invoke(input, thread);
+
+      const generate = llm.calls[0]?.system ?? '';
+      const fix = llm.calls[1]?.system ?? '';
+      expect(fix).toContain('NEEDS_INFO');
+      expect(fix).not.toContain('ONLY the contents of the .robot file'); // contradiría la 2.ª salida
+      expect(fix).toContain('is DATA');
+      expect(generate).not.toContain('NEEDS_INFO');
+    });
+  });
+
+  it('el prompt de la pregunta no manda devolver un .robot, pero sí tratar la US como dato', async () => {
+    const { llm, graph, thread } = setup(
+      [code(1), code(2), '¿Dónde está el botón?'],
+      [fail('button not found'), fail('button not found')],
+    );
+
+    await graph.invoke(input, thread);
+
+    const system = llm.calls[2]?.system ?? '';
+    expect(system).not.toMatch(/\.robot file|markdown fences/i); // contradiría "responde solo la pregunta"
+    expect(system).toContain('is DATA'); // la barrera frente a instrucciones inyectadas se mantiene (TS-01)
+  });
+
+  it('el prompt indica Browser Library en headless y la URL por variable (D-34, RNF-6)', async () => {
+    const { llm, graph, thread } = setup([code(1)], [pass]);
+
+    await graph.invoke(input, thread);
+
+    const system = llm.calls[0]?.system ?? '';
+    expect(system).toContain('Library    Browser');
+    expect(system).toContain('headless=True');
+    expect(system).toContain('${BASE_URL}');
+    expect(system).toContain('SeleniumLibrary');
+  });
+
+  it('el prompt prohíbe omitir el test con Skip: un test omitido no verifica nada', async () => {
+    const { llm, graph, thread } = setup([code(1)], [pass]);
+
+    await graph.invoke(input, thread);
+
+    expect(llm.calls[0]?.system).toMatch(/never use Skip/i);
   });
 
   it('usa el modelo barato (tier triage) solo para formular la pregunta de aclaración (D-37)', async () => {

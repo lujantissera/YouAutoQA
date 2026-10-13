@@ -7,4 +7,6 @@ export interface AgentConfig {
   maxTokens: number;
   /** Timeout de cada ejecución de Robot, en segundos. */
   executionTimeoutSeconds: number;
+  /** Si true, antes de generar se comprueba que la US tenga información suficiente (D-40). */
+  storyCheck: boolean;
 }

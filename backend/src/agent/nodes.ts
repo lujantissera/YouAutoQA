@@ -1,10 +1,17 @@
 import { interrupt } from '@langchain/langgraph';
 import type { AgentConfig } from './config.js';
 import { isCodeError, isEnvironmentFailure, isRepeatedError } from './failure.js';
+import { parseNeedsInfo } from './needs-info.js';
 import type { LlmPort, LlmResponse, RunnerPort, RunResult } from './ports.js';
-import { buildFixRequest, buildGenerateRequest, buildQuestionRequest } from './prompts.js';
+import {
+  buildFixRequest,
+  buildGenerateRequest,
+  buildQuestionRequest,
+  buildStoryCheckRequest,
+} from './prompts.js';
 import { EMPTY_TEST_LOGS, extractRobotCode } from './robot-code.js';
 import type { AgentStateType } from './state.js';
+import { parseStoryCheck } from './story-check.js';
 
 // Dependencias que el grafo necesita del exterior: siempre puertos, nunca OpenAI/Docker directos.
 export interface AgentDeps {
@@ -18,13 +25,27 @@ type StateUpdate = Partial<AgentStateType>;
 const EMPTY_TEST_RESULT: RunResult = { result: 'FAIL', logs: EMPTY_TEST_LOGS, timedOut: false };
 
 const ENVIRONMENT_ABORT_REASON =
-  'The application under test could not be reached, or timed out, in two consecutive runs.';
+  'The application under test could not be reached, or the test runner was unavailable, in two consecutive runs.';
 
 const tokensOf = (response: LlmResponse): number => response.tokensIn + response.tokensOut;
 
 // Un nodo es una función (estado) -> cambios. Se crean con una "factory" para inyectar las dependencias.
 export function createNodes({ llm, runner, config }: AgentDeps) {
   return {
+    // D-40: antes de gastar intentos, el modelo barato comprueba que la US tenga información
+    // suficiente. Si no, deja una pregunta en el estado y el grafo pausa en `askClarification`.
+    async checkStory(state: AgentStateType): Promise<StateUpdate> {
+      if (!config.storyCheck) return {};
+      const response = await llm.generate(buildStoryCheckRequest(state));
+      const check = parseStoryCheck(response.text);
+      if (check.ready) return { tokensUsed: tokensOf(response) };
+      return {
+        question: check.question,
+        tokensUsed: tokensOf(response),
+        status: 'awaiting_clarification',
+      };
+    },
+
     async generateTest(state: AgentStateType): Promise<StateUpdate> {
       const response = await llm.generate(buildGenerateRequest(state));
       return {
@@ -96,6 +117,22 @@ export function createNodes({ llm, runner, config }: AgentDeps) {
 
     async fixTest(state: AgentStateType): Promise<StateUpdate> {
       const response = await llm.generate(buildFixRequest(state));
+
+      // D-41: el modelo puede pedir información en vez de devolver código. No hay nada que
+      // ejecutar: el intento que falló pasa a `missing_info` y el grafo pausa para preguntar.
+      const question = parseNeedsInfo(response.text);
+      if (question !== null) {
+        const current = state.attempts.at(-1);
+        if (!current) throw new Error('fixTest called without any recorded attempt');
+        return {
+          failureKind: 'missing_info',
+          question,
+          tokensUsed: tokensOf(response),
+          status: 'awaiting_clarification',
+          attempts: [{ ...current, failureKind: 'missing_info' }],
+        };
+      }
+
       return {
         robotCode: extractRobotCode(response.text) ?? '',
         tokensUsed: tokensOf(response),
