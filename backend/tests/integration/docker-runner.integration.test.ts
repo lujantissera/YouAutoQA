@@ -19,6 +19,12 @@ Fails
     Should Be Equal    expected-value    other-value
 `;
 
+// Robot sale con código 0 si el test se omite, así que el runner debe mirar el resumen.
+const skippedTest = `*** Test Cases ***
+Gets Skipped
+    Skip    nothing to verify here
+`;
+
 const sleepingTest = `*** Test Cases ***
 Sleeps Too Long
     Sleep    60s
@@ -59,6 +65,13 @@ describe('DockerRunner (integración, necesita Docker)', { timeout: 120_000 }, (
     expect(result.result).toBe('FAIL');
     expect(result.timedOut).toBe(false);
     expect(result.logs).toContain('expected-value != other-value');
+  });
+
+  it('un test omitido (Skip) NO cuenta como PASS aunque Robot salga con código 0', async () => {
+    const result = await runner.run(skippedTest, 60);
+
+    expect(result.result).toBe('FAIL');
+    expect(result.logs).toContain('1 skipped');
   });
 
   it('corta la ejecución al pasar el timeout y la cuenta como fallo (US-06.2, RNF-2)', async () => {

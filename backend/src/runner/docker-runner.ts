@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RunnerPort, RunResult } from '../agent/ports.js';
 import { buildDockerRunArgs, type DockerRunOptions } from './docker-args.js';
+import { isPassingRun } from './robot-summary.js';
 
 // Los logs de un test descontrolado pueden ser enormes: nos quedamos con una parte.
 const MAX_LOG_CHARS = 200_000;
@@ -58,8 +59,9 @@ export class DockerRunner implements RunnerPort {
       child.on('close', (exitCode) => {
         clearTimeout(timer);
         resolve({
-          // Robot devuelve 0 si todos los tests pasan y un número distinto si alguno falla.
-          result: exitCode === 0 && !timedOut ? 'PASS' : 'FAIL',
+          // Código 0 no basta: Robot también devuelve 0 si el test se omitió (Skip). Si un log
+          // enorme se cortara antes del resumen final, no se podría confirmar y contaría como FAIL.
+          result: isPassingRun(exitCode, timedOut, output) ? 'PASS' : 'FAIL',
           logs: output.slice(0, MAX_LOG_CHARS),
           timedOut,
         });
