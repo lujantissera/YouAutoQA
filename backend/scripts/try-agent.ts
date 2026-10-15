@@ -82,6 +82,7 @@ async function main(): Promise<void> {
     config: {
       maxAttempts: numberFromEnv('MAX_ATTEMPTS', 5),
       maxTokens: numberFromEnv('MAX_TOKENS', 50_000),
+      maxClarifications: numberFromEnv('MAX_CLARIFICATIONS', 3),
       executionTimeoutSeconds: numberFromEnv('EXECUTION_TIMEOUT_SECONDS', 120),
       storyCheck: process.env.STORY_CHECK !== 'false', // activado salvo STORY_CHECK=false
     },

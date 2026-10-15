@@ -24,9 +24,10 @@ export function buildGraph(deps: AgentDeps) {
       .addNode('markFailed', nodes.markFailed)
       .addEdge(START, 'checkStory')
       // Rombo 0 (D-40): ¿tiene la US información suficiente? Si no, se pregunta antes de generar.
-      .addConditionalEdges('checkStory', routeAfterStoryCheck, {
+      .addConditionalEdges('checkStory', (state) => routeAfterStoryCheck(state, deps.config), {
         generate: 'generateTest',
         ask: 'askClarification',
+        abort: 'markFailed', // se agotaron las preguntas (D-42)
       })
       .addEdge('generateTest', 'runTest')
       // Rombo 1: la función decide y el mapa traduce su respuesta al nombre del nodo destino.
@@ -36,16 +37,17 @@ export function buildGraph(deps: AgentDeps) {
         classify: 'classifyFailure',
       })
       // Rombo 2. `retry` vuelve a ejecutar el mismo test sin pasar por el LLM (fallo de entorno).
-      .addConditionalEdges('classifyFailure', routeAfterClassify, {
+      .addConditionalEdges('classifyFailure', (state) => routeAfterClassify(state, deps.config), {
         fix: 'fixTest',
         ask: 'askClarification',
         retry: 'runTest',
         abort: 'markFailed',
       })
-      // Rombo 3 (D-41): ¿el modelo corrigió el test o pidió información al usuario?
-      .addConditionalEdges('fixTest', routeAfterFix, {
+      // Rombo 3 (D-41, D-42): ¿el modelo corrigió el test, pidió información o declaró CANNOT_TEST?
+      .addConditionalEdges('fixTest', (state) => routeAfterFix(state, deps.config), {
         run: 'runTest',
         ask: 'askClarification',
+        abort: 'markFailed',
       })
       .addEdge('askClarification', 'generateTest')
       .addEdge('markDone', END)

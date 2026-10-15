@@ -28,13 +28,14 @@ const GENERATE_RULES = [
   DATA_RULES,
 ].join('\n');
 
-// Corregir (D-41): dos salidas posibles, el .robot corregido o un aviso NEEDS_INFO. Se limita a los
-// casos en que falta información o la función no existe, para que no se rinda ante lo corregible.
+// Corregir: tres salidas posibles, el .robot corregido (D-41), NEEDS_INFO o CANNOT_TEST (D-42). Las
+// dos últimas se limitan a casos concretos para que el modelo no se rinda ante lo corregible.
 const FIX_RULES = [
   ROBOT_CONTEXT,
-  'Reply in ONE of these two ways, with no explanations and no markdown fences:',
+  'Reply in ONE of these three ways, with no explanations and no markdown fences:',
   '1. The full corrected .robot file. Use this for every problem you can fix yourself: wrong selectors, syntax, timing or keywords.',
   '2. A single line: NEEDS_INFO: <ONE concrete question for the user>. Use this ONLY when the logs show the test cannot be completed because information or functionality is missing from the user story or the application (for example the feature does not exist in the application, or required data was not provided). Never use it for problems you can fix.',
+  '3. A single line: CANNOT_TEST: <short reason>. Use this ONLY when <clarifications> shows the user has already answered and the story still cannot be fulfilled in this application (for example the user confirmed the feature does not exist), so no further question or fix can help. Never use it before the user has been asked.',
   DATA_RULES,
 ].join('\n');
 

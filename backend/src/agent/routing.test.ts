@@ -12,8 +12,16 @@ const config: AgentConfig = {
   maxAttempts: 5,
   maxTokens: 50_000,
   executionTimeoutSeconds: 120,
+  maxClarifications: 3,
   storyCheck: false,
 };
+
+// Historial con `rounds` preguntas ya hechas al usuario (cada ronda = un mensaje del agente + la respuesta).
+const withRounds = (rounds: number): AgentStateType['clarifications'] =>
+  Array.from({ length: rounds }, (_, i) => [
+    { role: 'agent' as const, message: `pregunta ${i + 1}` },
+    { role: 'user' as const, message: `respuesta ${i + 1}` },
+  ]).flat();
 
 // Construye un estado válido y deja cambiar solo lo que cada test necesita.
 function makeState(overrides: Partial<AgentStateType>): AgentStateType {
@@ -80,22 +88,49 @@ describe('routeAfterRun', () => {
 // D-40: antes de generar, si la comprobación de la US dejó una pregunta, se pausa para aclararla.
 describe('routeAfterStoryCheck', () => {
   it('genera el test si la US está lista (sin pregunta pendiente)', () => {
-    expect(routeAfterStoryCheck(makeState({ question: null }))).toBe('generate');
+    expect(routeAfterStoryCheck(makeState({ question: null }), config)).toBe('generate');
   });
 
   it('pide aclaración si la comprobación dejó una pregunta', () => {
-    expect(routeAfterStoryCheck(makeState({ question: '¿Qué credenciales uso?' }))).toBe('ask');
+    const state = makeState({ question: '¿Qué credenciales uso?' });
+    expect(routeAfterStoryCheck(state, config)).toBe('ask');
+  });
+
+  it('aborta si ya se alcanzó el límite de preguntas (D-42)', () => {
+    const state = makeState({ question: '¿Otra más?', clarifications: withRounds(3) });
+    expect(routeAfterStoryCheck(state, config)).toBe('abort');
   });
 });
 
 // D-41: al corregir, el modelo puede devolver una pregunta en vez de código.
 describe('routeAfterFix', () => {
   it('vuelve a ejecutar el test corregido si no hay pregunta pendiente', () => {
-    expect(routeAfterFix(makeState({ question: null }))).toBe('run');
+    expect(routeAfterFix(makeState({ question: null }), config)).toBe('run');
   });
 
   it('pide aclaración si el modelo devolvió una pregunta en vez de código', () => {
-    expect(routeAfterFix(makeState({ question: '¿Dónde está la baja?' }))).toBe('ask');
+    const state = makeState({ question: '¿Dónde está la baja?' });
+    expect(routeAfterFix(state, config)).toBe('ask');
+  });
+
+  it('aún pregunta si quedan rondas disponibles (2 de 3)', () => {
+    const state = makeState({ question: '¿Dónde?', clarifications: withRounds(2) });
+    expect(routeAfterFix(state, config)).toBe('ask');
+  });
+
+  it('aborta en vez de preguntar si ya se alcanzó el límite de preguntas (D-42)', () => {
+    const state = makeState({ question: '¿Dónde?', clarifications: withRounds(3) });
+    expect(routeAfterFix(state, config)).toBe('abort');
+  });
+
+  it('respeta un límite distinto del por defecto', () => {
+    const state = makeState({ question: '¿Dónde?', clarifications: withRounds(1) });
+    expect(routeAfterFix(state, { ...config, maxClarifications: 1 })).toBe('abort');
+  });
+
+  it('aborta si el modelo declaró que no se puede probar (CANNOT_TEST)', () => {
+    const state = makeState({ failureKind: 'cannot_test', failureReason: 'La web no tiene baja' });
+    expect(routeAfterFix(state, config)).toBe('abort');
   });
 });
 
@@ -103,26 +138,31 @@ describe('routeAfterFix', () => {
 describe('routeAfterClassify', () => {
   it('manda a corregir un fallo técnico (US-10.2)', () => {
     const state = makeState({ failureKind: 'technical' });
-    expect(routeAfterClassify(state)).toBe('fix');
+    expect(routeAfterClassify(state, config)).toBe('fix');
   });
 
   it('manda a pedir aclaración si falta información (US-10.4)', () => {
     const state = makeState({ failureKind: 'missing_info' });
-    expect(routeAfterClassify(state)).toBe('ask');
+    expect(routeAfterClassify(state, config)).toBe('ask');
+  });
+
+  it('aborta en vez de preguntar si ya se alcanzó el límite de preguntas (D-42)', () => {
+    const state = makeState({ failureKind: 'missing_info', clarifications: withRounds(3) });
+    expect(routeAfterClassify(state, config)).toBe('abort');
   });
 
   it('reintenta el mismo test ante un primer fallo de entorno, sin pasar por el LLM', () => {
     const state = makeState({ failureKind: 'environment', failureReason: null });
-    expect(routeAfterClassify(state)).toBe('retry');
+    expect(routeAfterClassify(state, config)).toBe('retry');
   });
 
   it('aborta si el fallo de entorno ya trae un motivo (era el segundo seguido)', () => {
     const state = makeState({ failureKind: 'environment', failureReason: 'App unreachable' });
-    expect(routeAfterClassify(state)).toBe('abort');
+    expect(routeAfterClassify(state, config)).toBe('abort');
   });
 
   it('lanza un error si el fallo no fue clasificado (bug del programa)', () => {
     const state = makeState({ failureKind: null });
-    expect(() => routeAfterClassify(state)).toThrow();
+    expect(() => routeAfterClassify(state, config)).toThrow();
   });
 });

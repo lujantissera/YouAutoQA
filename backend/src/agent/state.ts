@@ -3,8 +3,9 @@ import type { RunResult } from './ports.js';
 
 export type JobStatus = 'generating' | 'running' | 'done' | 'fail' | 'awaiting_clarification';
 // technical: el LLM puede corregirlo · missing_info: hay que preguntar al usuario ·
-// environment: la app no carga / timeout; ni corregir ni preguntar sirve (se reintenta).
-export type FailureKind = 'technical' | 'missing_info' | 'environment';
+// environment: la app no carga / timeout; ni corregir ni preguntar sirve (se reintenta) ·
+// cannot_test: la US no se puede cumplir en esta aplicación (D-42); el job termina en fail.
+export type FailureKind = 'technical' | 'missing_info' | 'environment' | 'cannot_test';
 
 export interface Clarification {
   role: 'agent' | 'user';

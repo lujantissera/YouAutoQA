@@ -7,6 +7,8 @@ export interface AgentConfig {
   maxTokens: number;
   /** Timeout de cada ejecución de Robot, en segundos. */
   executionTimeoutSeconds: number;
+  /** Máximo de preguntas que el agente puede hacer al usuario por job (D-42). */
+  maxClarifications: number;
   /** Si true, antes de generar se comprueba que la US tenga información suficiente (D-40). */
   storyCheck: boolean;
 }

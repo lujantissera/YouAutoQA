@@ -1,6 +1,7 @@
 import { interrupt } from '@langchain/langgraph';
 import type { AgentConfig } from './config.js';
 import { isCodeError, isEnvironmentFailure, isRepeatedError } from './failure.js';
+import { parseCannotTest } from './cannot-test.js';
 import { parseNeedsInfo } from './needs-info.js';
 import type { LlmPort, LlmResponse, RunnerPort, RunResult } from './ports.js';
 import {
@@ -26,6 +27,9 @@ const EMPTY_TEST_RESULT: RunResult = { result: 'FAIL', logs: EMPTY_TEST_LOGS, ti
 
 const ENVIRONMENT_ABORT_REASON =
   'The application under test could not be reached, or the test runner was unavailable, in two consecutive runs.';
+
+const CLARIFICATION_LIMIT_REASON =
+  'The agent still needed information after the maximum number of clarification rounds.';
 
 const tokensOf = (response: LlmResponse): number => response.tokensIn + response.tokensOut;
 
@@ -116,14 +120,27 @@ export function createNodes({ llm, runner, config }: AgentDeps) {
     },
 
     async fixTest(state: AgentStateType): Promise<StateUpdate> {
+      const current = state.attempts.at(-1);
+      if (!current) throw new Error('fixTest called without any recorded attempt');
       const response = await llm.generate(buildFixRequest(state));
+
+      // D-42: CANNOT_TEST = la US no se puede cumplir en esta app. Solo cierra el job si el usuario
+      // ya contestó alguna aclaración: antes de eso aún hay que darle la oportunidad de explicarse.
+      const cannotTest = parseCannotTest(response.text);
+      if (cannotTest !== null && state.clarifications.some((c) => c.role === 'user')) {
+        return {
+          failureKind: 'cannot_test',
+          failureReason: cannotTest,
+          tokensUsed: tokensOf(response),
+          attempts: [{ ...current, failureKind: 'cannot_test' }],
+        };
+      }
 
       // D-41: el modelo puede pedir información en vez de devolver código. No hay nada que
       // ejecutar: el intento que falló pasa a `missing_info` y el grafo pausa para preguntar.
-      const question = parseNeedsInfo(response.text);
+      // Un CANNOT_TEST prematuro cae aquí también: su motivo se le muestra al usuario como pregunta.
+      const question = parseNeedsInfo(response.text) ?? cannotTest;
       if (question !== null) {
-        const current = state.attempts.at(-1);
-        if (!current) throw new Error('fixTest called without any recorded attempt');
         return {
           failureKind: 'missing_info',
           question,
@@ -159,6 +176,13 @@ export function createNodes({ llm, runner, config }: AgentDeps) {
     },
 
     markDone: (): StateUpdate => ({ status: 'done' }),
-    markFailed: (): StateUpdate => ({ status: 'fail' }),
+    // Si queda una pregunta pendiente que no se pudo hacer, la causa es el límite de rondas (D-42).
+    // Los demás motivos (entorno, CANNOT_TEST) ya llegan en `failureReason`.
+    markFailed: (state: AgentStateType): StateUpdate => ({
+      status: 'fail',
+      failureReason:
+        state.failureReason ?? (state.question !== null ? CLARIFICATION_LIMIT_REASON : null),
+      question: null,
+    }),
   };
 }

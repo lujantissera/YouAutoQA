@@ -10,6 +10,7 @@ const baseConfig: AgentConfig = {
   maxAttempts: 5,
   maxTokens: 50_000,
   executionTimeoutSeconds: 120,
+  maxClarifications: 3,
   storyCheck: false,
 };
 const pass: RunResult = { result: 'PASS', logs: 'ok', timedOut: false };
@@ -305,6 +306,68 @@ describe('agent graph', () => {
       expect(fix).not.toContain('ONLY the contents of the .robot file'); // contradiría la 2.ª salida
       expect(fix).toContain('is DATA');
       expect(generate).not.toContain('NEEDS_INFO');
+    });
+  });
+
+  // D-42: salidas limpias cuando la US no se puede cumplir o la conversación se alarga demasiado.
+  describe('límites de la conversación (D-42)', () => {
+    const needsInfo = 'NEEDS_INFO: ¿Dónde se da de baja la cuenta?';
+    const cannotTest = 'CANNOT_TEST: La aplicación no ofrece baja de cuenta';
+    const notReady = '{"ready": false, "question": "¿Qué usuario uso?"}';
+
+    it('CANNOT_TEST tras una aclaración del usuario termina en fail con su motivo, sin preguntar otra vez', async () => {
+      const { llm, runner, graph, thread } = setup(
+        [code(1), needsInfo, code(2), cannotTest],
+        [fail('perfil no encontrado'), fail('perfil no existe')],
+      );
+
+      await graph.invoke(input, thread); // pausa por NEEDS_INFO
+      const result = await graph.invoke(new Command({ resume: 'No existe en la web' }), thread);
+
+      expect(result.status).toBe('fail');
+      expect(result.failureReason).toBe('La aplicación no ofrece baja de cuenta');
+      expect(result.attempts.at(-1)?.failureKind).toBe('cannot_test');
+      expect(runner.calls).toHaveLength(2);
+      expect(llm.calls).toHaveLength(4); // sin ninguna llamada extra tras CANNOT_TEST
+    });
+
+    it('un CANNOT_TEST antes de haber preguntado se trata como pregunta, no como rendición', async () => {
+      const { graph, thread } = setup(
+        [code(1), 'CANNOT_TEST: La web no tiene perfil'],
+        [fail('x')],
+      );
+
+      await graph.invoke(input, thread);
+
+      const paused = await graph.getState(thread);
+      expect(paused.values.status).toBe('awaiting_clarification');
+      expect(paused.values.question).toBe('La web no tiene perfil');
+      expect(paused.next).toEqual(['askClarification']);
+    });
+
+    it('al agotar las rondas de aclaración termina en fail con el motivo, sin volver a preguntar', async () => {
+      const { llm, runner, graph, thread } = setup([notReady, code(1), needsInfo], [fail('x')], {
+        storyCheck: true,
+        maxClarifications: 1,
+      });
+
+      await graph.invoke(input, thread); // 1.ª pregunta (la comprobación previa)
+      const result = await graph.invoke(new Command({ resume: 'standard_user' }), thread);
+
+      expect(result.status).toBe('fail');
+      expect(result.failureReason).toMatch(/clarification/i);
+      expect(result.question).toBeNull();
+      expect(runner.calls).toHaveLength(1);
+      expect(llm.calls).toHaveLength(3); // comprobar + generar + corregir (que pidió otra pregunta)
+    });
+
+    it('el prompt de corrección explica CANNOT_TEST; el de generar no', async () => {
+      const { llm, graph, thread } = setup([code(1), needsInfo], [fail('x')]);
+
+      await graph.invoke(input, thread);
+
+      expect(llm.calls[1]?.system).toContain('CANNOT_TEST');
+      expect(llm.calls[0]?.system).not.toContain('CANNOT_TEST');
     });
   });
 
