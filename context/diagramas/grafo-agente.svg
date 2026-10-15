@@ -23,10 +23,16 @@
     <line x1="835" y1="360" x2="890" y2="360"/>
     <line x1="725" y1="385" x2="670" y2="450"/>
     <line x1="785" y1="385" x2="840" y2="450"/>
-    <path d="M550,335 V100 H730 V70" stroke-dasharray="5 4"/>
+    <line x1="550" y1="335" x2="550" y2="298"/>
+    <line x1="505" y1="277" x2="430" y2="340"/>
+    <path d="M550,242 V100 H730 V70" stroke-dasharray="5 4"/>
     <path d="M1040,360 H1052 V8 H550 V20" stroke-dasharray="5 4"/>
     <path d="M350,73 V510 H965 V385" stroke-dasharray="5 4"/>
   </g>
+
+  <!-- routeAfterFix: salida "ask" que se une a la línea punteada hacia askClarification -->
+  <path d="M490,270 H350" stroke="#444" stroke-width="1.6" fill="none" stroke-dasharray="5 4"/>
+  <circle cx="350" cy="270" r="3" fill="#444"/>
 
   <!-- Nodos (hacen cosas) -->
   <g stroke="#2b5fa3" stroke-width="1.6" fill="#e8f1fb">
@@ -55,11 +61,13 @@
   <!-- Decisiones (aristas condicionales) -->
   <g stroke="#b36b00" stroke-width="1.6" fill="#fff4e0">
     <polygon points="275,45 350,17 425,45 350,73"/>
+    <polygon points="490,270 550,242 610,270 550,298"/>
     <polygon points="755,110 835,150 755,190 675,150"/>
     <polygon points="755,320 835,360 755,400 675,360"/>
   </g>
   <g text-anchor="middle" font-size="11" font-weight="bold" fill="#1a1a1a">
     <text x="350" y="49" font-size="10">routeAfterStoryCheck</text>
+    <text x="550" y="274" font-size="10">routeAfterFix</text>
     <text x="755" y="154">routeAfterRun</text>
     <text x="755" y="364">routeAfterClassify</text>
   </g>
@@ -71,6 +79,7 @@
     <rect x="890" y="164" width="140" height="36" rx="18" fill="#fde7e7" stroke="#c62828"/>
     <rect x="540" y="450" width="160" height="36" rx="8" fill="#f3f3f3" stroke="#777"/>
     <rect x="780" y="450" width="160" height="36" rx="8" fill="#fde7e7" stroke="#c62828"/>
+    <rect x="360" y="340" width="105" height="36" rx="8" fill="#fde7e7" stroke="#c62828"/>
   </g>
   <g text-anchor="middle" font-size="12" font-weight="bold" fill="#1a1a1a">
     <text x="45" y="49">START</text>
@@ -78,10 +87,12 @@
     <text x="960" y="187">END · fail</text>
     <text x="620" y="466">retry → runTest</text>
     <text x="860" y="466">abort → END · fail</text>
+    <text x="412" y="355" font-size="11">abort → fail</text>
   </g>
   <g text-anchor="middle" font-size="10" fill="#333">
     <text x="620" y="480">mismo test, sin LLM</text>
     <text x="860" y="480">motivo en failureReason</text>
+    <text x="412" y="369">CANNOT_TEST</text>
   </g>
 
   <!-- Etiquetas de flechas -->
@@ -92,11 +103,12 @@
     <text x="884" y="216">intentos/tokens</text>
     <text x="884" y="229">agotados</text>
     <text x="747" y="222" text-anchor="end">classify (falló y quedan intentos)</text>
-    <text x="558" y="200">vuelve a ejecutar</text>
+    <text x="558" y="200">run: vuelve a ejecutar</text>
+    <text x="440" y="264" text-anchor="middle">ask</text>
     <text x="640" y="352" text-anchor="middle">fix</text>
     <text x="862" y="352" text-anchor="middle">ask</text>
     <text x="650" y="425" text-anchor="end">entorno, 1.ª vez</text>
-    <text x="800" y="425">entorno, 2.ª seguida</text>
+    <text x="830" y="425">entorno 2.ª o sin rondas</text>
     <text x="890" y="312">respuesta del usuario: attempt = 0</text>
     <text x="890" y="325">y se vuelve a generar el test</text>
   </g>
