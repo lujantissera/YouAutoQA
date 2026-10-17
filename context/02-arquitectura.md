@@ -45,6 +45,23 @@
 - Fallo por falta de info (error repetido entre intentos) → `pedir_aclaracion`; al responder, se añade al contexto y el contador vuelve a 0.
 - Intentos = 5 → fin (`fail`).
 
+**Diagrama del grafo** (versión imprimible: `context/diagramas/grafo-agente.svg` y `.pdf`)
+
+```mermaid
+flowchart TD
+  S([START]) --> G[generateTest]
+  G --> R[runTest]
+  R --> D1{routeAfterRun}
+  D1 -- PASS --> DONE([END: done])
+  D1 -- "intentos o tokens agotados" --> FAIL([END: fail])
+  D1 -- classify --> C[classifyFailure]
+  C --> D2{routeAfterClassify}
+  D2 -- fix --> F[fixTest]
+  F --> R
+  D2 -- ask --> A["askClarification (interrupt)"]
+  A -- "respuesta del usuario, attempt = 0" --> G
+```
+
 **Estado (campos)**: `usText`, `clarifications[]`, `robotCode`, `attempt` (se reinicia a 0 tras aclaración), `lastRun {result, logs, timedOut}`, `attempts[]` (historial con clasificación), `tokensUsed`, `status`.
 
 **Límites**: se comprueban en la arista tras `ejecutar_test`, antes de gastar más: `attempt >= MAX_ATTEMPTS` o límite de tokens ⇒ `fail` (D-22, D-28).

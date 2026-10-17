@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1060" height="600" viewBox="0 -20 1060 600" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#444"/>
+    </marker>
+  </defs>
+  <rect x="0" y="-20" width="1060" height="600" fill="#ffffff"/>
+  <text x="20" y="-2" font-size="15" font-weight="bold" fill="#222">Grafo del agente YouAutoQA (LangGraph)</text>
+  <text x="330" y="-2" font-size="11" fill="#666">checkStory se puede desactivar con STORY_CHECK=false (entonces START va directo a generateTest)</text>
+
+  <!-- Flechas -->
+  <g stroke="#444" stroke-width="1.6" fill="none" marker-end="url(#arrow)">
+    <line x1="75" y1="45" x2="100" y2="45"/>
+    <line x1="250" y1="45" x2="275" y2="45"/>
+    <line x1="425" y1="45" x2="475" y2="45"/>
+    <line x1="625" y1="45" x2="680" y2="45"/>
+    <line x1="755" y1="70" x2="755" y2="110"/>
+    <line x1="835" y1="150" x2="890" y2="118"/>
+    <line x1="835" y1="150" x2="890" y2="182"/>
+    <line x1="755" y1="190" x2="755" y2="240"/>
+    <line x1="755" y1="290" x2="755" y2="320"/>
+    <line x1="675" y1="360" x2="625" y2="360"/>
+    <line x1="835" y1="360" x2="890" y2="360"/>
+    <line x1="725" y1="385" x2="670" y2="450"/>
+    <line x1="785" y1="385" x2="840" y2="450"/>
+    <line x1="550" y1="335" x2="550" y2="298"/>
+    <line x1="505" y1="277" x2="430" y2="340"/>
+    <path d="M550,242 V100 H730 V70" stroke-dasharray="5 4"/>
+    <path d="M1040,360 H1052 V8 H550 V20" stroke-dasharray="5 4"/>
+    <path d="M350,73 V510 H965 V385" stroke-dasharray="5 4"/>
+  </g>
+
+  <!-- routeAfterFix: salida "ask" que se une a la línea punteada hacia askClarification -->
+  <path d="M490,270 H350" stroke="#444" stroke-width="1.6" fill="none" stroke-dasharray="5 4"/>
+  <circle cx="350" cy="270" r="3" fill="#444"/>
+
+  <!-- Nodos (hacen cosas) -->
+  <g stroke="#2b5fa3" stroke-width="1.6" fill="#e8f1fb">
+    <rect x="100" y="20" width="150" height="50" rx="6"/>
+    <rect x="475" y="20" width="150" height="50" rx="6"/>
+    <rect x="680" y="20" width="150" height="50" rx="6"/>
+    <rect x="655" y="240" width="200" height="50" rx="6"/>
+    <rect x="475" y="335" width="150" height="50" rx="6"/>
+    <rect x="890" y="335" width="150" height="50" rx="6"/>
+  </g>
+  <g text-anchor="middle" fill="#1a1a1a">
+    <text x="175" y="42" font-size="13" font-weight="bold">checkStory</text>
+    <text x="175" y="58" font-size="11">LLM barato: ¿US completa?</text>
+    <text x="550" y="42" font-size="13" font-weight="bold">generateTest</text>
+    <text x="550" y="58" font-size="11">LLM genera el .robot</text>
+    <text x="755" y="42" font-size="13" font-weight="bold">runTest</text>
+    <text x="755" y="58" font-size="11">runner Docker + timeout</text>
+    <text x="755" y="262" font-size="13" font-weight="bold">classifyFailure</text>
+    <text x="755" y="278" font-size="11">reglas; el LLM solo redacta la pregunta</text>
+    <text x="550" y="357" font-size="13" font-weight="bold">fixTest</text>
+    <text x="550" y="373" font-size="11">LLM corrige con el error</text>
+    <text x="965" y="357" font-size="13" font-weight="bold">askClarification</text>
+    <text x="965" y="373" font-size="11">interrupt: pausa y pregunta</text>
+  </g>
+
+  <!-- Decisiones (aristas condicionales) -->
+  <g stroke="#b36b00" stroke-width="1.6" fill="#fff4e0">
+    <polygon points="275,45 350,17 425,45 350,73"/>
+    <polygon points="490,270 550,242 610,270 550,298"/>
+    <polygon points="755,110 835,150 755,190 675,150"/>
+    <polygon points="755,320 835,360 755,400 675,360"/>
+  </g>
+  <g text-anchor="middle" font-size="11" font-weight="bold" fill="#1a1a1a">
+    <text x="350" y="49" font-size="10">routeAfterStoryCheck</text>
+    <text x="550" y="274" font-size="10">routeAfterFix</text>
+    <text x="755" y="154">routeAfterRun</text>
+    <text x="755" y="364">routeAfterClassify</text>
+  </g>
+
+  <!-- Inicio, fin y saltos -->
+  <g stroke-width="1.6">
+    <rect x="15" y="32" width="60" height="26" rx="13" fill="#eee" stroke="#555"/>
+    <rect x="890" y="100" width="140" height="36" rx="18" fill="#e3f4e3" stroke="#2e7d32"/>
+    <rect x="890" y="164" width="140" height="36" rx="18" fill="#fde7e7" stroke="#c62828"/>
+    <rect x="540" y="450" width="160" height="36" rx="8" fill="#f3f3f3" stroke="#777"/>
+    <rect x="780" y="450" width="160" height="36" rx="8" fill="#fde7e7" stroke="#c62828"/>
+    <rect x="360" y="340" width="105" height="36" rx="8" fill="#fde7e7" stroke="#c62828"/>
+  </g>
+  <g text-anchor="middle" font-size="12" font-weight="bold" fill="#1a1a1a">
+    <text x="45" y="49">START</text>
+    <text x="960" y="123">END · done</text>
+    <text x="960" y="187">END · fail</text>
+    <text x="620" y="466">retry → runTest</text>
+    <text x="860" y="466">abort → END · fail</text>
+    <text x="412" y="355" font-size="11">abort → fail</text>
+  </g>
+  <g text-anchor="middle" font-size="10" fill="#333">
+    <text x="620" y="480">mismo test, sin LLM</text>
+    <text x="860" y="480">motivo en failureReason</text>
+    <text x="412" y="369">CANNOT_TEST</text>
+  </g>
+
+  <!-- Etiquetas de flechas -->
+  <g font-size="11" fill="#333">
+    <text x="428" y="38">generate</text>
+    <text x="358" y="105">ask (falta información en la US)</text>
+    <text x="838" y="122">PASS</text>
+    <text x="884" y="216">intentos/tokens</text>
+    <text x="884" y="229">agotados</text>
+    <text x="747" y="222" text-anchor="end">classify (falló y quedan intentos)</text>
+    <text x="558" y="200">run: vuelve a ejecutar</text>
+    <text x="440" y="264" text-anchor="middle">ask</text>
+    <text x="640" y="352" text-anchor="middle">fix</text>
+    <text x="862" y="352" text-anchor="middle">ask</text>
+    <text x="650" y="425" text-anchor="end">entorno, 1.ª vez</text>
+    <text x="830" y="425">entorno 2.ª o sin rondas</text>
+    <text x="890" y="312">respuesta del usuario: attempt = 0</text>
+    <text x="890" y="325">y se vuelve a generar el test</text>
+  </g>
+
+  <!-- Leyenda -->
+  <g font-size="11" fill="#333">
+    <rect x="20" y="545" width="14" height="10" fill="#e8f1fb" stroke="#2b5fa3"/>
+    <text x="40" y="554">Nodo: hace algo (LLM, runner)</text>
+    <polygon points="250,550 257,544 264,550 257,556" fill="#fff4e0" stroke="#b36b00"/>
+    <text x="270" y="554">Rombo: arista condicional (función pura con tests)</text>
+    <rect x="590" y="545" width="14" height="10" rx="3" fill="#f3f3f3" stroke="#777"/>
+    <text x="610" y="554">Salto a otro punto del grafo</text>
+    <line x1="800" y1="550" x2="830" y2="550" stroke="#444" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <text x="838" y="554">Flecha punteada: vuelve atrás</text>
+  </g>
+</svg>
