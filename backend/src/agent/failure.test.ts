@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isCodeError, isEnvironmentFailure, isRepeatedError, normalizeError } from './failure.js';
+import {
+  extractFailureMessage,
+  isCodeError,
+  isEnvironmentFailure,
+  isRepeatedError,
+  normalizeError,
+} from './failure.js';
 import type { RunResult } from './ports.js';
 import { EMPTY_TEST_LOGS } from './robot-code.js';
 
@@ -107,5 +113,50 @@ describe('normalizeError', () => {
     expect(normalizeError('Timeout after 5.2 SECONDS at line 12')).toBe(
       'timeout after #.# seconds at line #',
     );
+  });
+});
+
+// Un log real de Robot: el ERROR está bajo la línea "| FAIL |"; lo demás (nombre del test,
+// resumen, rutas de salida) puede cambiar entre intentos aunque el error sea el mismo.
+const robotLog = (testName: string, message: string): string =>
+  [
+    '==============================================================================',
+    `${testName.padEnd(70)}| FAIL |`,
+    message,
+    '------------------------------------------------------------------------------',
+    `${'Suite'.padEnd(70)}| FAIL |`,
+    '1 test, 0 passed, 1 failed',
+    '==============================================================================',
+    'Output:  /work/results/output.xml',
+  ].join('\n');
+
+describe('extractFailureMessage', () => {
+  it('se queda con el mensaje bajo la primera línea | FAIL |', () => {
+    const logs = robotLog('Login', "Element 'login' not found");
+    expect(extractFailureMessage(logs)).toBe("Element 'login' not found");
+  });
+
+  it('conserva un mensaje de varias líneas (p. ej. el Call log de Playwright)', () => {
+    const message = 'TimeoutError: waiting\nCall log:\n  - waiting for locator("#login")';
+    expect(extractFailureMessage(robotLog('Login', message))).toBe(message);
+  });
+
+  it('si el log no tiene esa forma (p. ej. un error de Docker), devuelve el log entero', () => {
+    const logs = 'failed to connect to the docker API';
+    expect(extractFailureMessage(logs)).toBe(logs);
+  });
+});
+
+describe('isRepeatedError con logs reales de Robot', () => {
+  it('es verdadero si el error es el mismo aunque cambie el nombre del test', () => {
+    const before = robotLog('Login Test', "Element 'login' not found");
+    const after = robotLog('Otro Nombre Distinto', "Element 'login' not found");
+    expect(isRepeatedError(before, after)).toBe(true);
+  });
+
+  it('es falso si el error cambia aunque todo lo demás sea igual', () => {
+    const before = robotLog('Login Test', "Element 'login' not found");
+    const after = robotLog('Login Test', "Element 'password' not found");
+    expect(isRepeatedError(before, after)).toBe(false);
   });
 });

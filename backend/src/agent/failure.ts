@@ -42,5 +42,25 @@ export function normalizeError(logs: string): string {
 // `previousLogs` es undefined en el primer fallo: no hay nada con qué comparar.
 export function isRepeatedError(previousLogs: string | undefined, currentLogs: string): boolean {
   if (previousLogs === undefined) return false;
-  return normalizeError(previousLogs) === normalizeError(currentLogs);
+  return (
+    normalizeError(extractFailureMessage(previousLogs)) ===
+    normalizeError(extractFailureMessage(currentLogs))
+  );
+}
+
+// Robot marca el resultado de cada test con una línea "<nombre> | FAIL |" y, debajo, el mensaje
+// del error; ese bloque acaba en una línea de guiones o de iguales. Comparar solo el mensaje evita
+// falsos "no repetido" cuando cambia algo ajeno al error (el nombre del test, el resumen...).
+// Si el log no tiene esa forma (p. ej. un error de Docker) se devuelve entero, para no perder nada.
+export function extractFailureMessage(logs: string): string {
+  const lines = logs.split(/\r?\n/);
+  const start = lines.findIndex((line) => line.includes('| FAIL |'));
+  if (start === -1) return logs;
+
+  const message: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (/^[-=]{10,}$/.test(line.trim())) break;
+    message.push(line);
+  }
+  return message.join('\n').trim() || logs;
 }
