@@ -10,6 +10,7 @@ import { loadOpenAiConfig } from '../src/llm/config.js';
 import { OpenAiLlm } from '../src/llm/openai-llm.js';
 import type { AttemptRecord } from '../src/agent/state.js';
 import { DockerRunner } from '../src/runner/docker-runner.js';
+import { loadRunnerConfig } from '../src/runner/config.js';
 
 // El .env está en la raíz del repo, fuera de backend/.
 try {
@@ -72,13 +73,7 @@ async function main(): Promise<void> {
   const openAi = loadOpenAiConfig(process.env);
   const graph = buildGraph({
     llm: new OpenAiLlm(new OpenAI({ apiKey: openAi.apiKey }), openAi.models),
-    runner: new DockerRunner({
-      image: 'marketsquare/robotframework-browser:20.6.0',
-      memory: '1g',
-      cpus: '1',
-      pidsLimit: 256,
-      baseUrl: process.env.AUT_BASE_URL ?? 'https://www.saucedemo.com',
-    }),
+    runner: new DockerRunner(loadRunnerConfig(process.env)),
     config: {
       maxAttempts: numberFromEnv('MAX_ATTEMPTS', 5),
       maxTokens: numberFromEnv('MAX_TOKENS', 50_000),
